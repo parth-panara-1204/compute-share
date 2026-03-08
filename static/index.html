@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Compute Share</title>
+  <style>
+    /* ── Reset & base ─────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d1117;
+      --surface:  #161b22;
+      --border:   #30363d;
+      --accent:   #238636;
+      --accent-h: #2ea043;
+      --danger:   #da3633;
+      --danger-h: #f85149;
+      --blue:     #1f6feb;
+      --text:     #e6edf3;
+      --muted:    #8b949e;
+      --radius:   10px;
+      --font:     'Segoe UI', system-ui, -apple-system, sans-serif;
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Layout ───────────────────────────────────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    header .logo {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -.3px;
+    }
+    header .logo svg { color: var(--accent); }
+
+    .host-badge {
+      background: rgba(31,111,235,.15);
+      border: 1px solid rgba(31,111,235,.35);
+      border-radius: 20px;
+      padding: .25rem .8rem;
+      font-size: .78rem;
+      color: #58a6ff;
+      font-family: monospace;
+    }
+
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    /* ── Cards ────────────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    .card-title {
+      font-size: .85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-bottom: 1.25rem;
+    }
+
+    /* ── Host info bar ────────────────────────────────────────────────────── */
+    .host-stats {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .stat {
+      flex: 1;
+      min-width: 120px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .75rem 1rem;
+    }
+    .stat-label { font-size: .72rem; color: var(--muted); margin-bottom: .25rem; text-transform: uppercase; letter-spacing: .04em; }
+    .stat-value { font-size: 1.4rem; font-weight: 700; }
+
+    /* ── Form ─────────────────────────────────────────────────────────────── */
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+
+    .field label {
+      display: flex;
+      justify-content: space-between;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--muted);
+      margin-bottom: .45rem;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .field label span { color: var(--text); font-weight: 700; font-size: .9rem; }
+
+    input[type=range] {
+      width: 100%;
+      accent-color: var(--blue);
+      cursor: pointer;
+      height: 6px;
+    }
+
+    .field-full { grid-column: 1 / -1; }
+
+    input[type=text] {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: .55rem .75rem;
+      font-size: .9rem;
+      outline: none;
+      transition: border-color .2s;
+    }
+    input[type=text]:focus { border-color: var(--blue); }
+
+    /* Preset buttons */
+    .presets {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+    .preset-btn {
+      padding: .4rem .9rem;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      font-size: .8rem;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .preset-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+    .preset-btn.active { background: rgba(31,111,235,.2); border-color: #58a6ff; color: #58a6ff; }
+
+    /* Resource bar */
+    .resource-bar {
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border);
+      margin-top: .5rem;
+      overflow: hidden;
+    }
+    .resource-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--blue), #58a6ff);
+      transition: width .3s ease;
+    }
+
+    .submit-btn {
+      width: 100%;
+      margin-top: 1.5rem;
+      padding: .7rem;
+      background: var(--accent);
+      border: none;
+      border-radius: 7px;
+      color: #fff;
+      font-size: .95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+    }
+    .submit-btn:hover { background: var(--accent-h); }
+    .submit-btn:active { transform: scale(.98); }
+    .submit-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── Success banner ───────────────────────────────────────────────────── */
+    #spawn-result {
+      display: none;
+      background: rgba(35,134,54,.1);
+      border: 1px solid rgba(35,134,54,.4);
+      border-radius: var(--radius);
+      padding: 1.25rem 1.5rem;
+      margin-bottom: 2rem;
+      animation: fadeIn .3s ease;
+    }
+    #spawn-result h3 { font-size: .9rem; color: #3fb950; margin-bottom: .9rem; display: flex; align-items: center; gap: .5rem; }
+    #spawn-result h3::before { content: "✓"; background: var(--accent); color: #fff; border-radius: 50%; width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; font-size: .7rem; }
+    .ssh-box {
+      display: flex;
+      align-items: center;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      overflow: hidden;
+    }
+    .ssh-box code {
+      flex: 1;
+      font-family: 'Consolas', 'Fira Code', monospace;
+      font-size: .9rem;
+      padding: .65rem 1rem;
+      color: #79c0ff;
+    }
+    .copy-btn {
+      padding: .65rem .9rem;
+      background: var(--surface);
+      border: none;
+      border-left: 1px solid var(--border);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: .8rem;
+      transition: color .15s;
+      white-space: nowrap;
+    }
+    .copy-btn:hover { color: var(--text); }
+    .result-meta {
+      display: flex;
+      gap: 1rem;
+      margin-top: .75rem;
+      flex-wrap: wrap;
+    }
+    .meta-chip {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: .2rem .7rem;
+      font-size: .75rem;
+      color: var(--muted);
+    }
+    .meta-chip strong { color: var(--text); }
+
+    /* ── Containers list ──────────────────────────────────────────────────── */
+    .container-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: .9rem 0;
+      border-bottom: 1px solid var(--border);
+      animation: fadeIn .25s ease;
+    }
+    .container-row:last-child { border-bottom: none; }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+      box-shadow: 0 0 6px var(--accent);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: .4; }
+    }
+    .c-info { flex: 1; min-width: 0; }
+    .c-name { font-size: .9rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .c-ssh  { font-family: monospace; font-size: .78rem; color: #79c0ff; margin-top: .15rem; cursor: pointer; }
+    .c-ssh:hover { text-decoration: underline; }
+    .c-badges { display: flex; gap: .4rem; flex-wrap: wrap; }
+    .badge {
+      font-size: .7rem;
+      padding: .15rem .5rem;
+      border-radius: 4px;
+      background: rgba(31,111,235,.15);
+      border: 1px solid rgba(31,111,235,.25);
+      color: #58a6ff;
+    }
+    .badge.mem { background: rgba(187,128,9,.15); border-color: rgba(187,128,9,.3); color: #d29922; }
+
+    .kill-btn {
+      padding: .35rem .8rem;
+      border: 1px solid var(--danger);
+      background: transparent;
+      color: var(--danger);
+      border-radius: 6px;
+      font-size: .78rem;
+      cursor: pointer;
+      transition: all .15s;
+      flex-shrink: 0;
+    }
+    .kill-btn:hover { background: var(--danger); color: #fff; }
+
+    .empty-state {
+      text-align: center;
+      padding: 2.5rem 0;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+    .empty-state svg { margin-bottom: .75rem; opacity: .3; }
+
+    /* ── Misc ─────────────────────────────────────────────────────────────── */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+    .refresh-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: .3rem .7rem;
+      border-radius: 6px;
+      font-size: .78rem;
+      cursor: pointer;
+      transition: color .15s, border-color .15s;
+    }
+    .refresh-btn:hover { color: var(--text); border-color: var(--muted); }
+
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--text);
+      border-radius: 50%;
+      animation: spin .6s linear infinite;
+      vertical-align: middle;
+      margin-right: .4rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .password-hint {
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: .4rem;
+    }
+    .password-hint strong { color: #d29922; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="2" y="7" width="20" height="14" rx="2"/>
+      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+    </svg>
+    Compute Share
+  </div>
+  <div class="host-badge" id="host-ip-badge">loading…</div>
+</header>
+
+<main>
+
+  <!-- ── Host stats ──────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">Host Resources</div>
+    <div class="host-stats">
+      <div class="stat"><div class="stat-label">CPU Cores</div><div class="stat-value" id="h-cpu">—</div></div>
+      <div class="stat"><div class="stat-label">Total RAM</div><div class="stat-value" id="h-mem">—</div></div>
+      <div class="stat"><div class="stat-label">Available RAM</div><div class="stat-value" id="h-avail">—</div></div>
+      <div class="stat"><div class="stat-label">Running Nodes</div><div class="stat-value" id="h-nodes">—</div></div>
+    </div>
+  </div>
+
+  <!-- ── Spawn result ────────────────────────────────────────────────────── -->
+  <div id="spawn-result">
+    <h3>Container launched successfully</h3>
+    <div class="ssh-box">
+      <code id="ssh-cmd"></code>
+      <button class="copy-btn" onclick="copySSH()">Copy</button>
+    </div>
+    <div class="password-hint">Password: <strong id="ssh-pass"></strong></div>
+    <div class="result-meta" id="result-meta"></div>
+  </div>
+
+  <!-- ── Spawn form ──────────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="card-title">Launch a New Container</div>
+
+    <div class="presets" id="presets">
+      <button class="preset-btn" onclick="applyPreset(0.5, 128)">Micro · ½ CPU · 128 MB</button>
+      <button class="preset-btn" onclick="applyPreset(1, 256)">Small · 1 CPU · 256 MB</button>
+      <button class="preset-btn" onclick="applyPreset(2, 512)">Medium · 2 CPU · 512 MB</button>
+      <button class="preset-btn" onclick="applyPreset(4, 1024)">Large · 4 CPU · 1 GB</button>
+    </div>
+
+    <div class="form-grid">
+      <div class="field">
+        <label>CPU Cores <span id="cpu-val">1.0</span></label>
+        <input type="range" id="cpu-slider" min="0.25" max="8" step="0.25" value="1"
+               oninput="syncCpu(this.value)" />
+        <div class="resource-bar"><div class="resource-fill" id="cpu-fill" style="width:12.5%"></div></div>
+      </div>
+
+      <div class="field">
+        <label>Memory (MB) <span id="mem-val">256</span></label>
+        <input type="range" id="mem-slider" min="64" max="8192" step="64" value="256"
+               oninput="syncMem(this.value)" />
+        <div class="resource-bar"><div class="resource-fill" id="mem-fill" style="width:3%"></div></div>
+      </div>
+
+      <div class="field field-full">
+        <label>Label (optional) <span></span></label>
+        <input type="text" id="label-input" placeholder="e.g. parth-dev, ml-training…" maxlength="64" />
+      </div>
+    </div>
+
+    <button class="submit-btn" id="launch-btn" onclick="spawnContainer()">Launch Container</button>
+  </div>
+
+  <!-- ── Running containers ────────────────────────────────────────────────── -->
+  <div class="card">
+    <div class="section-header">
+      <span class="card-title" style="margin:0">Running Containers</span>
+      <button class="refresh-btn" onclick="loadContainers()">↻ Refresh</button>
+    </div>
+    <div id="containers-list">
+      <div class="empty-state">Loading…</div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+  const API = '';   // same origin
+
+  // ── Host info ─────────────────────────────────────────────────────────────
+  async function loadHostInfo() {
+    try {
+      const r = await fetch(`${API}/api/host-info`);
+      const d = await r.json();
+      document.getElementById('h-cpu').textContent   = d.cpu_cores;
+      document.getElementById('h-mem').textContent   = fmtMem(d.memory_total_mb);
+      document.getElementById('h-avail').textContent = fmtMem(d.memory_available_mb);
+      document.getElementById('host-ip-badge').textContent = d.host_ip;
+      // Cap sliders to host limits
+      const cpuSlider = document.getElementById('cpu-slider');
+      const memSlider = document.getElementById('mem-slider');
+      cpuSlider.max = Math.max(d.cpu_cores, 1);
+      memSlider.max = Math.min(d.memory_total_mb, 65536);
+    } catch(e) {
+      document.getElementById('host-ip-badge').textContent = 'offline';
+    }
+  }
+
+  // ── Containers list ───────────────────────────────────────────────────────
+  async function loadContainers() {
+    const list = document.getElementById('containers-list');
+    try {
+      const r = await fetch(`${API}/api/containers`);
+      const data = await r.json();
+      document.getElementById('h-nodes').textContent = data.length;
+      if (!data.length) {
+        list.innerHTML = `<div class="empty-state">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+          </svg><br>No containers running</div>`;
+        return;
+      }
+      list.innerHTML = data.map(c => `
+        <div class="container-row" id="row-${c.id}">
+          <div class="dot"></div>
+          <div class="c-info">
+            <div class="c-name">${esc(c.name)}</div>
+            <div class="c-ssh" onclick="copyText('${esc(c.ssh_command || '')}')" title="Click to copy">
+              ${esc(c.ssh_command || 'N/A')}
+            </div>
+            <div class="c-badges" style="margin-top:.35rem">
+              <span class="badge">${c.cpu_cores} vCPU</span>
+              <span class="badge mem">${c.memory_mb} MB RAM</span>
+              <span class="badge" style="background:rgba(35,134,54,.15);border-color:rgba(35,134,54,.3);color:#3fb950">${c.status}</span>
+              ${c.port ? `<span class="badge">port ${c.port}</span>` : ''}
+            </div>
+          </div>
+          <button class="kill-btn" onclick="killContainer('${c.id}')">Terminate</button>
+        </div>`).join('');
+    } catch(e) {
+      list.innerHTML = `<div class="empty-state">Could not reach server.</div>`;
+    }
+  }
+
+  // ── Spawn ─────────────────────────────────────────────────────────────────
+  async function spawnContainer() {
+    const btn = document.getElementById('launch-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Launching…';
+
+    const body = {
+      cpu_cores: parseFloat(document.getElementById('cpu-slider').value),
+      memory_mb: parseInt(document.getElementById('mem-slider').value),
+      label: document.getElementById('label-input').value.trim(),
+    };
+
+    try {
+      const r = await fetch(`${API}/api/containers`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.detail || 'Unknown error');
+
+      document.getElementById('ssh-cmd').textContent  = d.ssh_command;
+      document.getElementById('ssh-pass').textContent = d.ssh_password;
+      document.getElementById('result-meta').innerHTML = `
+        <span class="meta-chip"><strong>${d.cpu_cores}</strong> vCPU</span>
+        <span class="meta-chip"><strong>${d.memory_mb} MB</strong> RAM</span>
+        <span class="meta-chip">Port <strong>${d.port}</strong></span>
+        <span class="meta-chip">Name <strong>${esc(d.name)}</strong></span>
+      `;
+      const res = document.getElementById('spawn-result');
+      res.style.display = 'block';
+      res.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      loadContainers();
+      document.getElementById('label-input').value = '';
+    } catch(e) {
+      alert('Error: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Launch Container';
+    }
+  }
+
+  // ── Kill ──────────────────────────────────────────────────────────────────
+  async function killContainer(id) {
+    if (!confirm('Terminate this container? All data inside will be lost.')) return;
+    const btn = document.querySelector(`#row-${id} .kill-btn`);
+    if (btn) { btn.disabled = true; btn.textContent = '…'; }
+    try {
+      const r = await fetch(`${API}/api/containers/${id}`, { method: 'DELETE' });
+      if (!r.ok) { const d = await r.json(); throw new Error(d.detail); }
+      loadContainers();
+    } catch(e) { alert('Error: ' + e.message); if (btn) { btn.disabled = false; btn.textContent = 'Terminate'; } }
+  }
+
+  // ── Slider sync ───────────────────────────────────────────────────────────
+  function syncCpu(v) {
+    document.getElementById('cpu-val').textContent = parseFloat(v).toFixed(2).replace(/\.?0+$/,'');
+    const slider = document.getElementById('cpu-slider');
+    const pct = ((v - slider.min) / (slider.max - slider.min)) * 100;
+    document.getElementById('cpu-fill').style.width = pct + '%';
+  }
+  function syncMem(v) {
+    document.getElementById('mem-val').textContent = v;
+    const slider = document.getElementById('mem-slider');
+    const pct = ((v - slider.min) / (slider.max - slider.min)) * 100;
+    document.getElementById('mem-fill').style.width = pct + '%';
+  }
+
+  // ── Presets ───────────────────────────────────────────────────────────────
+  function applyPreset(cpu, mem) {
+    const cs = document.getElementById('cpu-slider');
+    const ms = document.getElementById('mem-slider');
+    cs.value = cpu; syncCpu(cpu);
+    ms.value = mem; syncMem(mem);
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+  }
+
+  // ── Clipboard ─────────────────────────────────────────────────────────────
+  function copySSH() {
+    copyText(document.getElementById('ssh-cmd').textContent);
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1800);
+  }
+  function copyText(t) {
+    navigator.clipboard.writeText(t).catch(() => {
+      const el = document.createElement('textarea');
+      el.value = t; document.body.appendChild(el); el.select();
+      document.execCommand('copy'); document.body.removeChild(el);
+    });
+  }
+
+  // ── Utils ─────────────────────────────────────────────────────────────────
+  function fmtMem(mb) { return mb >= 1024 ? (mb/1024).toFixed(1)+' GB' : mb+' MB'; }
+  function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  loadHostInfo();
+  loadContainers();
+  setInterval(loadContainers, 10000);   // auto-refresh every 10 s
+</script>
+</body>
+</html>
